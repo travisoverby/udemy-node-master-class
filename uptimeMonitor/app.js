@@ -12,6 +12,7 @@ const StringDecoder = require('string_decoder').StringDecoder;
 const config = require('./config');
 const fs = require('fs');
 
+
 // Instantiate the HTTP server
 const httpServer = http.createServer((req, res) => {
 	unifiedServer(req, res);
@@ -19,7 +20,7 @@ const httpServer = http.createServer((req, res) => {
 
 // Start the server
 httpServer.listen(config.httpPort, () => {
-	console.log(`The server is listening on port ${config.httpPort} in ${config.envName} mode`);
+	console.log(`The HTTP server is listening on port ${config.httpPort} in ${config.envName} mode`);
 });
 
 // Instantiate the HTTPS server
@@ -34,7 +35,7 @@ const httpsServer = http.createServer(httpsServerOptions, (req, res) => {
 
 // Start the HTTPS server
 httpsServer.listen(config.httpsPort, () => {
-	console.log(`The server is listening on port ${config.httpsPort} in ${config.envName} mode`);
+	console.log(`The HTTPS server is listening on port ${config.httpsPort} in ${config.envName} mode`);
 });
 
 // All the server logic for both the http and the https server
