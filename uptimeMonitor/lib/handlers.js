@@ -4,8 +4,8 @@
 'use strict';
 
 // Dependencies
-
-
+const _data = require('./data');
+const helpers = require('./helpers');
 // Define the handlers
 const handlers = {};
 
@@ -35,7 +35,38 @@ handlers._users.post = (data, callback) => {
 
   if (firstName && lastName && phone && password && tosAgreement) {
     // Make sure that the user doesn't already exist
-    
+    _data.read('users', phone, (err, data) => {
+      if (err) {
+        // Hash the password
+        const hashedPassword = helpers.hash(password);
+
+        // Create the user object
+        if (hashedPassword) {
+          const userObject = {
+            firstName : firstName,
+            lastName : lastName,
+            phone : phone,
+            hashedPassword : hashedPassword,
+            tosAgreement : true
+          };
+
+          // Store the user
+          _data.create('users', phone, userObject, err => {
+            if (!err) {
+              callback(200);
+            } else {
+              console.log(err);
+              callback(500, {'Error' : 'Could not create the new user'});
+            }
+          });
+        } else {
+          callback(500, {'Error' : "Could not hash the user's password"});
+        }
+      } else {
+        // User already exists
+        callback(400, {'Error' : 'A user with that phone number already exists'});
+      }
+    });
   } else {
     callback(400, {'Error' : 'Missing required fields'});
   }
