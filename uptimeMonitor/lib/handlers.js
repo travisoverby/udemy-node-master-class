@@ -80,16 +80,25 @@ handlers._users.get = (data, callback) => {
   const phone = typeof(data.queryStringObject.phone) === 'string' && data.queryStringObject.phone.trim().length === 10 ? data.queryStringObject.phone.trim() : false;
 
   if (phone) {
-    // Lookup the user
-    _data.read('users', phone, (err, data) => {
-      if (!err && data) {
-        // Remove the hashed password from the user object before returning it to the requestor
-        delete data.hashedPassword;
-        callback(200, data);
+    // Get the token from the headers
+    const token = typeof(data.headers.token) === 'string' ? data.headers.token : false;
+    handlers._tokens.verifyToken(token, phone, tokenIsValid => {
+      if (tokenIsValid) {
+        _data.read('users', phone, (err, data) => {
+          if (!err && data) {
+            // Remove the hashed password from the user object before returning it to the requestor
+            delete data.hashedPassword;
+            callback(200, data);
+          } else {
+            callback(400, {'Error' : "User does not exist"});
+          }
+        });
       } else {
-        callback(400, {'Error' : "User does not exist"});
+        callback(403, {'Error' : 'Missing required token in header, or token is invalid'});
       }
     });
+    // Lookup the user
+
   } else {
     callback(400, {'Error' : "Missing required field"});
   }
@@ -98,7 +107,6 @@ handlers._users.get = (data, callback) => {
 // Users - put
 // Required data: phone
 // Optional data: firstName, lastName, password (at least one must be specified)
-// @TODO only let an authenticated user update their own object, don't let them update anyone else's
 handlers._users.put = (data, callback) => {
   // Check for the required field
   const phone = typeof(data.payload.phone) === 'string' && data.payload.phone.trim().length === 10 ? data.payload.phone.trim() : false;
@@ -113,36 +121,46 @@ handlers._users.put = (data, callback) => {
   if (phone) {
     // Error if nothing is sent to update
     if (firstName || lastName || password) {
-      //Lookup the user
-      _data.read('users' , phone, (err, userData) => {
-        // Update the fields necessary
-        if (!err && userData) {
-          // Update the fields necessary
-          if (firstName) {
-            userData.firstName = firstName;
-          }
+      // Get the token from the headers
+      const token = typeof(data.headers.token) === 'string' ? data.headers.token : false;
 
-          if (lastName) {
-            userData.lastName = lastName;
-          }
+      // Verify that the given token is valid for the phone number
+      handers._tokens.verifyToken(token, phone, tokenIsValid => {
+        if (tokenIsValid) {
+          _data.read('users' , phone, (err, userData) => {
+            // Update the fields necessary
+            if (!err && userData) {
+              // Update the fields necessary
+              if (firstName) {
+                userData.firstName = firstName;
+              }
 
-          if (password) {
-            userData.hashedPassword = helpers.hash(password);
-          }
+              if (lastName) {
+                userData.lastName = lastName;
+              }
 
-          // Store the new updates
-          _data.update('users', phone, userData, err => {
-            if (!err) {
-              callback(200, {'Response' : "User was updated"});
+              if (password) {
+                userData.hashedPassword = helpers.hash(password);
+              }
+
+              // Store the new updates
+              _data.update('users', phone, userData, err => {
+                if (!err) {
+                  callback(200, {'Response' : "User was updated"});
+                } else {
+                  console.log(err);
+                  callback(500, {'Error' : "Could not update the user"});
+                }
+              });
             } else {
-              console.log(err);
-              callback(500, {'Error' : "Could not update the user"});
+              callback(400, {'Error' : 'The specified user does not exist'});
             }
           });
         } else {
-          callback(400, {'Error' : 'The specified user does not exist'});
+          callback(403, {'Error' : 'Missing required token in header, or token is invalid'});
         }
       });
+      //Lookup the user
     } else {
       callback(400, {'Error' : 'Missing fields to update'});
     }
@@ -153,27 +171,36 @@ handlers._users.put = (data, callback) => {
 
 // Users - delete
 // Required field: phone
-// @TODO Only let an authenticated user deete their object. Don't let them delete anyone else's.
-// @TODO Cleanup (delete) any other data files associated with this user
 handlers._users.delete = (data, callback) => {
   // Check that the phone number is valid
   const phone = typeof(data.queryStringObject.phone) === 'string' && data.queryStringObject.phone.trim().length === 10 ? data.queryStringObject.phone.trim() : false;
 
   if (phone) {
-    // Look up the user  
-    _data.read('users', phone, (err, data) => {
-      if (!err && data) {
-        _data.delete('users', phone, err => {
-          if (!err) {
-            callback(200, {'Response' : 'User was deleted'});
+    // Get the token from the headers
+    const token = typeof(data.headers.token) === 'string' ? data.headers.token : false;
+    
+    // Verify that the given token is valid for the phone number
+    handlers._tokens.verifyToken(token, phone, tokenIsValid => {
+      if (tokenIsValid) {
+        // Look up the user  
+        _data.read('users', phone, (err, data) => {
+          if (!err && data) {
+            _data.delete('users', phone, err => {
+              if (!err) {
+                callback(200, {'Response' : 'User was deleted'});
+              } else {
+                callback(500, {'Error' : 'Could not delete the specified user'});
+              }
+            });
           } else {
-            callback(500, {'Error' : 'Could not delete the specified user'});
+            callback(400, {'Error' : "Could not find the specified user"});
           }
         });
       } else {
-        callback(400, {'Error' : "Could not find the specified user"});
+        callback(403, {'Error' : 'Missing required token in header, or token is invalid'});
       }
     });
+    
   } else {
     callback(400, {'Error' : "Missing required field"});
   }
