@@ -178,7 +178,7 @@ handlers._users.delete = (data, callback) => {
   if (phone) {
     // Get the token from the headers
     const token = typeof(data.headers.token) === 'string' ? data.headers.token : false;
-    
+
     // Verify that the given token is valid for the phone number
     handlers._tokens.verifyToken(token, phone, tokenIsValid => {
       if (tokenIsValid) {
@@ -369,6 +369,25 @@ handlers._tokens.verifyToken = (id, phone, callback) => {
   });
 };
 
+// Checks
+handlers.checks = (data, callback) => {
+  const acceptableMethods = ['post', 'get', 'put', 'delete'];
+  if (acceptableMethods.includes(data.method)) {
+    handlers._checks[data.method](data, callback);
+  } else {
+    callback(405 + "method not allowed");
+  }
+};
+
+// Container for all the checks methods
+
+// Checks - post
+// Required data: protocol, url, method, successCodes, timeoutSeconds
+// Optional data: none
+handlers._checks.post = (data, callback) => {
+  // Validate inputs
+  
+};
 // Ping handler
 handlers.ping = (data, callback) => {
   // Callback an http status code, and a payload object
